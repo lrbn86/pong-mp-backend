@@ -84,4 +84,6 @@ async function handleMessage(event, { connectionId, apiGatewayClient, dynamoDBCl
  * AmazonAPIGatewayPushToCloudWatchLogs
  * AmazonDynamoDBFullAccess
  * AWSLambdaRole
+ * 
+ * If we want to see logs from API Gateway, we need to grab the service role ARN and put it into the API settings
  */

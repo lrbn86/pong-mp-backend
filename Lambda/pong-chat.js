@@ -79,4 +79,9 @@ async function handleMessage(event, { connectionId, apiGatewayClient, dynamoDBCl
 
 /**
  * Remember to re-deploy API Gateway when adding a different route when checking for action/routeKey
+ * The service role needs to have:
+ * AmazonAPIGatewayInvokeFullAccess
+ * AmazonAPIGatewayPushToCloudWatchLogs
+ * AmazonDynamoDBFullAccess
+ * AWSLambdaRole
  */

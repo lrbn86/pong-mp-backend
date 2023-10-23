@@ -86,4 +86,5 @@ async function handleMessage(event, { connectionId, apiGatewayClient, dynamoDBCl
  * AWSLambdaRole
  * 
  * If we want to see logs from API Gateway, we need to grab the service role ARN and put it into the API settings
+ * If a route has an enabled two-way communication on API Gateway WebSocket, then the client will receive the response from server (e.g. { statusCode: 200, body: 'Message Sent' })
  */

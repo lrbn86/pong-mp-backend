@@ -14,7 +14,7 @@ export const handler = async (event) => {
 
     switch (eventType) {
         case 'CONNECT':
-            return await handleConnection(params);
+            return await handleConnection(event, params);
         case 'DISCONNECT':
             return await handleDisconnection(params);
         case 'MESSAGE':
@@ -22,9 +22,10 @@ export const handler = async (event) => {
         default:
             break;
     }
+    return { statusCode: 200, body: 'Event Handler' };
 };
 
-async function handleConnection({ connectionId, apiGatewayClient, dynamoDBClient }) {
+async function handleConnection(event, { connectionId, apiGatewayClient, dynamoDBClient }) {
     try {
         const params = { TableName: 'WebSocketConnections', Item: { connectionId: { S: connectionId } } };
         await dynamoDBClient.send(new PutItemCommand(params));
@@ -52,24 +53,34 @@ async function handleMessage(event, { connectionId, apiGatewayClient, dynamoDBCl
         const params = { TableName: 'WebSocketConnections' };
         const data = await dynamoDBClient.send(new ScanCommand(params));
         const connections = data.Items.map(item => item.connectionId.S);
+        // const connections = data.Items;
 
         if (routeKey === 'SendMessage') {
             // Send the message to all active connections
-            const postPromises = connections.map(async (connectionId) => {
+            const postPromises = connections.map(async (id) => {
                 try {
-                    const requestParams = { ConnectionId: connectionId, Data: JSON.parse(event.body).data };
+                    const connection = data.Items.find(item => item.connectionId.S === connectionId);
+                    const message = `${connection.username.S}: ${JSON.parse(event.body).data}`;
+                    const requestParams = { ConnectionId: id, Data: message };
                     const command = new PostToConnectionCommand(requestParams);
                     await apiGatewayClient.send(command);
                 } catch (error) {
-                    console.error(`Error sending message to connection ${connectionId}: ${error.toString()}`);
-                    return { statusCode: 500, body: `Error sending message to connection ${connectionId}: ${error.toString()}` };
+                    console.error(`Error sending message to connection ${id}: ${error.toString()}`);
+                    return { statusCode: 500, body: `Error sending message to connection ${id}: ${error.toString()}` };
                 }
             });
             // Wait for all messages to be sent before responding
             await Promise.all(postPromises);
-            return { statusCode: 200, body: 'Sent message to all connections' };
-        } else if (routeKey === 'GetSodium') {
-            return { statusCode: 200, body: 'Sent get sodium' };
+            return { statusCode: 200, body: 'Message sent to all connections' };
+        } else if (routeKey === 'SendUsername') {
+            const username = JSON.parse(event.body).username;
+            try {
+                const params = { TableName: 'WebSocketConnections', Item: { connectionId: { S: connectionId }, username: { S: username } } };
+                await dynamoDBClient.send(new PutItemCommand(params));
+                return { statusCode: 200, body: 'Username attached successfully' };
+            } catch (error) {
+                return { statusCode: 500, body: `Error attaching username '${username}' to connection ${connectionId}: ${error.toString()}` };
+            }
         }
     } catch (error) {
         console.error('Error sending message', error.toString());
